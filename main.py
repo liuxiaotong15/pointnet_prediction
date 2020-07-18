@@ -1,3 +1,5 @@
+
+import torch
 from ase.visualize import view
 from ase import Atoms, Atom
 from ase.db import connect
@@ -9,7 +11,6 @@ from ase import Atom
 from ase.io import read, write
 from base64 import b64encode, b64decode
 import itertools
-import torch
 import torch.nn as nn
 import torch.nn.parallel
 import torch.utils.data

@@ -5,8 +5,8 @@ https://blog.csdn.net/weixin_39373480/article/details/88878629
 
 import torch
 import torch.nn as nn
-import torch.nn.parallel
-import torch.utils.data
+# import torch.nn.parallel
+# import torch.utils.data
 from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
@@ -81,8 +81,9 @@ class PointNetEncoder(nn.Module):
         x = F.relu(self.bn2(x_skip))
         x = self.bn3(self.conv3(x))
         x = torch.max(x, 2, keepdim=True)[0]
-        x = x.view(-1, 1024, 1)
+        x = x.view(-1, 1024)
         if self.global_feat:
+            x = x.view(-1, 1024, 1)
             return x, trans
         else:
             x = x.view(-1, 1024, 1).repeat(1, 1, n_pts)
