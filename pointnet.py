@@ -116,8 +116,8 @@ class PointNetCls(nn.Module):
     def __init__(self, k = 2):
         super(PointNetCls, self).__init__()
         self.k = k
-        self.feat = PointNetEncoder(global_feat=False)
-        self.conv1 = torch.nn.Conv1d(1088, 512, 1)
+        self.feat = PointNetEncoder(global_feat=True)
+        self.conv1 = torch.nn.Conv1d(1024, 512, 1)
         self.conv2 = torch.nn.Conv1d(512, 256, 1)
         self.conv3 = torch.nn.Conv1d(256, 128, 1)
         self.conv4 = torch.nn.Conv1d(128, self.k, 1)
@@ -135,6 +135,7 @@ class PointNetCls(nn.Module):
         x = self.conv4(x)
         x = x.transpose(2,1).contiguous()
         x = F.log_softmax(x.view(-1,self.k), dim=-1)
-        x = x.view(batchsize, n_pts, self.k)
+        # x = x.view(batchsize, n_pts, self.k)
+        x = x.view(batchsize, self.k)
         return x
 

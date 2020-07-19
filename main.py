@@ -1,5 +1,7 @@
 
 import torch
+
+import argparse
 from ase.visualize import view
 from ase import Atoms, Atom
 from ase.db import connect
@@ -17,7 +19,7 @@ import torch.utils.data
 from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
-from pointnet import PointNetEncoder, PointNetReg
+from pointnet import PointNetCls, PointNetReg
 
 
 seed = 1234
@@ -55,9 +57,14 @@ atom_dict = {'H': 0, 'C':1, 'O':2, 'F':3, 'N':4}
 atom_cnt_lst = []
 atom_cnt_dict = {}
 
-model = PointNetReg()
-# train_lst = []
-# train_tgt = []
+def parse_args():
+    '''PARAMETERS'''
+    parser = argparse.ArgumentParser('PointNet')
+    parser.add_argument('--batch_size', type=int, default=32, help='batch size in training')
+    parser.add_argument('--task', type=str, default='reg', help='specify task (\'reg\' or \'cls\')')
+    # parser.add_argument('--normal', action='store_true', default=True, help='Whether to use normal information [default: False]')
+    return parser.parse_args()
+
 
 def get_data_pp(idx, type):
     # extract properties
@@ -73,9 +80,11 @@ def get_data_pp(idx, type):
     prop = prop.reshape(shape)
     return prop
 
-def gen_potential_data(data_count=100, atom_count=2, side_len=5):
+def gen_potential_data(args, data_count=100, atom_count=2, side_len=5):
     input_lst = []
     tgt_lst = []
+    postv = data_count/2
+    negtv = data_count/2
     while(len(tgt_lst) < data_count):
         atom_coords = []
         atoms = Atoms()
@@ -91,35 +100,52 @@ def gen_potential_data(data_count=100, atom_count=2, side_len=5):
         
         atoms.set_calculator(morse_calc)
         engy = atoms.get_potential_energy()
-        if engy < 0:
-            input_lst.append(atom_coords)
-            tgt_lst.append(min(engy, 0))
+
+        if args.task == 'reg':
+            if engy < 0:
+                input_lst.append(atom_coords)
+                tgt_lst.append(min(engy, 0))
+        elif args.task == 'cls':
+            if engy < 0 and negtv > 0:
+                negtv-=1
+                input_lst.append(atom_coords)
+                tgt_lst.append(0)
+            elif engy > 0 and postv > 0:
+                postv -= 1
+                input_lst.append(atom_coords)
+                tgt_lst.append(1)
+            else:
+                pass
+        else:
+            pass
     return input_lst, tgt_lst
 
-if __name__ == '__main__':
-    # for row in rows:
-    #     xyz = row.toatoms().get_positions()
-    #     if train_lst.shape[0] == 0:
-    #         train_lst = np.array([xyz])
-    #         print(train_lst.shape)
-    #     else:
-    #         print(xyz.shape)
-    #         train_lst = np.dstack((train_lst, xyz))
-    #     train_tgt = np.append(train_tgt, get_data_pp(row.id, G))
-    #     # print(row.id, get_data_pp(row.id, G))
-    train_lst, train_tgt = gen_potential_data(data_count=1000, atom_count=2)
-    
-    criterion = torch.nn.MSELoss() # Defined loss function
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001) # Defined optimizer
-    x_data = torch.from_numpy(np.array(train_lst).transpose(0, 2, 1)).to('cpu')
-    mean = np.mean(np.array(train_tgt))
-    y_data = torch.from_numpy(np.array(train_tgt)).to('cpu')
+def main(args):
+    model = None
+    if args.task == 'reg':
+        model = PointNetReg()
+        train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=2)
+        
+        criterion = torch.nn.MSELoss() # Defined loss function
+        x_data = torch.from_numpy(np.array(train_lst).transpose(0, 2, 1)).to('cpu')
+        mean = np.mean(np.array(train_tgt))
+        y_data = torch.from_numpy(np.array(train_tgt)).to('cpu')
 
-    # print(x_data.shape, y_data.shape)
+    elif args.task == 'cls':
+        print('classify task...')
+        model = PointNetCls()
+        train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=2)
+        criterion = torch.nn.CrossEntropyLoss() # Defined loss function
+        x_data = torch.from_numpy(np.array(train_lst).transpose(0, 2, 1)).to('cpu')
+        y_data = torch.from_numpy(np.array(train_tgt)).to('cpu')
+    else:
+        pass
+    
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001) # Defined optimizer
     for epoch in range(1000):
         # Forward pass
         y_pred = model(x_data)
-        print(y_pred.shape)
+        # print(y_pred.shape)
     
         # Compute loss
         loss = criterion(y_pred, y_data)
@@ -130,7 +156,7 @@ if __name__ == '__main__':
         # Compute loss vali
         loss_vali = criterion(y_pred_vali, y_data_vali)
         '''
-        print(epoch, loss.item(), mean)
+        print(epoch, loss.item())
 
         # Zero gradients
         optimizer.zero_grad()
@@ -138,3 +164,7 @@ if __name__ == '__main__':
         loss.backward()
         # update weights
         optimizer.step()
+
+if __name__ == '__main__':
+    args = parse_args()
+    main(args)
