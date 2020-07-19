@@ -76,21 +76,24 @@ def get_data_pp(idx, type):
 def gen_potential_data(data_count=100, atom_count=2, side_len=5):
     input_lst = []
     tgt_lst = []
-    for _ in range(data_count):
+    while(len(tgt_lst) < data_count):
         atom_coords = []
         atoms = Atoms()
-        for _ in range(atom_count):
+        atoms.append(Atom('Au', (0.5, 0.5, 0.5)))
+        for _ in range(atom_count-1):
             x = random.random() * side_len
             y = random.random() * side_len
             z = random.random() * side_len
             atoms.append(Atom('Au', (x, y, z)))
             atom_coords.append([x, y, z])
+        
         morse_calc = MorsePotential()
+        
         atoms.set_calculator(morse_calc)
         engy = atoms.get_potential_energy()
-        
-        input_lst.append(atom_coords)
-        tgt_lst.append(engy)
+        if engy < 0:
+            input_lst.append(atom_coords)
+            tgt_lst.append(min(engy, 0))
     return input_lst, tgt_lst
 
 if __name__ == '__main__':
@@ -107,11 +110,12 @@ if __name__ == '__main__':
     train_lst, train_tgt = gen_potential_data(data_count=1000, atom_count=2)
     
     criterion = torch.nn.MSELoss() # Defined loss function
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001) # Defined optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001) # Defined optimizer
     x_data = torch.from_numpy(np.array(train_lst).transpose(0, 2, 1)).to('cpu')
+    mean = np.mean(np.array(train_tgt))
     y_data = torch.from_numpy(np.array(train_tgt)).to('cpu')
 
-    print(x_data.shape, y_data.shape)
+    # print(x_data.shape, y_data.shape)
     for epoch in range(1000):
         # Forward pass
         y_pred = model(x_data)
@@ -126,7 +130,7 @@ if __name__ == '__main__':
         # Compute loss vali
         loss_vali = criterion(y_pred_vali, y_data_vali)
         '''
-        print(epoch, loss.item())
+        print(epoch, loss.item(), mean)
 
         # Zero gradients
         optimizer.zero_grad()
