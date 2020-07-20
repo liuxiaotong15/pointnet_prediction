@@ -175,8 +175,12 @@ def main(args):
     y_pred_test = model(x_data_test)
     success = 0
     for i in range(1000):
-        if y_pred_test.numpy()[i] == test_tgt[i]:
+        if y_pred_test[i][0] > y_pred_test[i][1] and 0 == test_tgt[i]:
             success += 1
+        elif y_pred_test[i][0] < y_pred_test[i][1] and 1 == test_tgt[i]:
+            success += 1
+        else:
+            pass
     print(success)
 
 if __name__ == '__main__':
