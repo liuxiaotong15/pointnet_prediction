@@ -121,26 +121,27 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=5):
     return input_lst, tgt_lst
 
 def main(args):
+    min_vali_loss = 99999
     model = None
+    train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=2)
+    vali_lst, vali_tgt = gen_potential_data(args=args, data_count=1000, atom_count=2)
+    test_lst, test_tgt = gen_potential_data(args=args, data_count=1000, atom_count=2)
+    
     if args.task == 'reg':
         model = PointNetReg()
-        train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=2)
-        
         criterion = torch.nn.MSELoss() # Defined loss function
-        x_data = torch.from_numpy(np.array(train_lst).transpose(0, 2, 1)).to('cpu')
-        mean = np.mean(np.array(train_tgt))
-        y_data = torch.from_numpy(np.array(train_tgt)).to('cpu')
-
     elif args.task == 'cls':
-        print('classify task...')
         model = PointNetCls()
-        train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=2)
         criterion = torch.nn.CrossEntropyLoss() # Defined loss function
-        x_data = torch.from_numpy(np.array(train_lst).transpose(0, 2, 1)).to('cpu')
-        y_data = torch.from_numpy(np.array(train_tgt)).to('cpu')
     else:
         pass
-    
+    x_data = torch.from_numpy(np.array(train_lst).transpose(0, 2, 1)).to('cpu')
+    y_data = torch.from_numpy(np.array(train_tgt)).to('cpu')
+    x_data_vali = torch.from_numpy(np.array(vali_lst).transpose(0, 2, 1)).to('cpu')
+    y_data_vali = torch.from_numpy(np.array(vali_tgt)).to('cpu')
+    x_data_test = torch.from_numpy(np.array(test_lst).transpose(0, 2, 1)).to('cpu')
+    y_data_test = torch.from_numpy(np.array(test_tgt)).to('cpu')
+
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001) # Defined optimizer
     for epoch in range(1000):
         # Forward pass
@@ -149,14 +150,18 @@ def main(args):
     
         # Compute loss
         loss = criterion(y_pred, y_data)
-        '''
+        
         # Forward pass vali
-        y_pred_vali = model(x_data_vali.double())
+        y_pred_vali = model(x_data_vali)
     
         # Compute loss vali
         loss_vali = criterion(y_pred_vali, y_data_vali)
-        '''
-        print(epoch, loss.item())
+        print(epoch, loss.item(), loss_vali.item())
+
+        if loss_vali.item() < min_vali_loss:
+            min_vali_loss = loss_vali.item()
+            # save model
+            torch.save(model.state_dict(), 'best_vali.pth')
 
         # Zero gradients
         optimizer.zero_grad()
@@ -164,6 +169,15 @@ def main(args):
         loss.backward()
         # update weights
         optimizer.step()
+    # load model
+    model.load_state_dict(torch.load('best_vali.pth'))
+    # inference on test dataset
+    y_pred_test = model(x_data_test)
+    success = 0
+    for i in range(1000):
+        if y_pred_test.numpy()[i] == test_tgt[i]:
+            success += 1
+    print(success)
 
 if __name__ == '__main__':
     args = parse_args()
