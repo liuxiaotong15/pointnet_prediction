@@ -162,6 +162,7 @@ def main(args):
         if loss_vali.item() < min_vali_loss:
             min_vali_loss = loss_vali.item()
             # save model
+            print('model saved...')
             torch.save(model.state_dict(), 'best_vali.pth')
 
         # Zero gradients
