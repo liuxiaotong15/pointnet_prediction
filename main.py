@@ -123,9 +123,10 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=5):
 def main(args):
     min_vali_loss = 99999
     model = None
-    train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=2)
-    vali_lst, vali_tgt = gen_potential_data(args=args, data_count=1000, atom_count=2)
-    test_lst, test_tgt = gen_potential_data(args=args, data_count=1000, atom_count=2)
+    atom_cnt = 3
+    train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
+    vali_lst, vali_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
+    test_lst, test_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
     
     if args.task == 'reg':
         model = PointNetReg()
@@ -174,7 +175,7 @@ def main(args):
     # inference on test dataset
     y_pred_test = model(x_data_test)
     success = 0
-    for i in range(1000):
+    for i in range(len(test_tgt)):
         if y_pred_test[i][0] > y_pred_test[i][1] and 0 == test_tgt[i]:
             success += 1
         elif y_pred_test[i][0] < y_pred_test[i][1] and 1 == test_tgt[i]:
