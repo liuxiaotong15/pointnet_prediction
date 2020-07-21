@@ -171,19 +171,29 @@ def main(args):
         loss.backward()
         # update weights
         optimizer.step()
+
     # load model
     model.load_state_dict(torch.load('best_vali.pth'))
     # inference on test dataset
     y_pred_test = model(x_data_test)
-    success = 0
-    for i in range(len(test_tgt)):
-        if y_pred_test[i][0] > y_pred_test[i][1] and 0 == test_tgt[i]:
-            success += 1
-        elif y_pred_test[i][0] < y_pred_test[i][1] and 1 == test_tgt[i]:
-            success += 1
-        else:
-            pass
-    print(success)
+    
+    if args.task == 'cls':
+        success = 0
+        for i in range(len(test_tgt)):
+            if y_pred_test[i][0] > y_pred_test[i][1] and 0 == test_tgt[i]:
+                success += 1
+            elif y_pred_test[i][0] < y_pred_test[i][1] and 1 == test_tgt[i]:
+                success += 1
+            else:
+                pass
+        print('classify success: ', success, 'of', len(test_tgt))
+    elif args.task == 'reg':
+        err = 0
+        for i in range(len(test_tgt)):
+            err += abs((y_pred_test[i] - test_tgt[i])/test_tgt[i])
+        print('percentage of regression error: ', err/len(test_tgt)*100, '%')
+    else:
+        pass
 
 if __name__ == '__main__':
     args = parse_args()
