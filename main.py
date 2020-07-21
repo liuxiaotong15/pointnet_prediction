@@ -88,7 +88,8 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=5):
     while(len(tgt_lst) < data_count):
         atom_coords = []
         atoms = Atoms()
-        atoms.append(Atom('Au', (0.5, 0.5, 0.5)))
+        # atoms.append(Atom('Au', (0.5, 0.5, 0.5)))
+        atoms.append(Atom('Au', (0, 0, 0)))
         for _ in range(atom_count-1):
             x = random.random() * side_len
             y = random.random() * side_len
@@ -102,7 +103,7 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=5):
         engy = atoms.get_potential_energy()
 
         if args.task == 'reg':
-            if engy < 0:
+            if engy < -0.01:
                 input_lst.append(atom_coords)
                 tgt_lst.append(min(engy, 0))
         elif args.task == 'cls':
@@ -118,12 +119,19 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=5):
                 pass
         else:
             pass
+
+    if args.task == 'reg':
+        # normalize
+        tgt_lst = np.array(tgt_lst)
+        tgt_lst /= max(abs(tgt_lst))
+        tgt_lst = tgt_lst.tolist()
+
     return input_lst, tgt_lst
 
 def main(args):
     min_vali_loss = 99999
     model = None
-    atom_cnt = 3
+    atom_cnt = 2
     train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
     vali_lst, vali_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
     test_lst, test_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
@@ -189,8 +197,10 @@ def main(args):
         print('classify success: ', success, 'of', len(test_tgt))
     elif args.task == 'reg':
         err = 0
+        test_pred = y_pred_test.detach().numpy()
         for i in range(len(test_tgt)):
-            err += abs((y_pred_test[i] - test_tgt[i])/test_tgt[i])
+            print(test_pred[i], test_tgt[i])
+            err += abs((test_pred[i] - test_tgt[i])/test_tgt[i])
         print('percentage of regression error: ', err/len(test_tgt)*100, '%')
     else:
         pass
