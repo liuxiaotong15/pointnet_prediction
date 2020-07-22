@@ -135,7 +135,7 @@ class PointNetEncoder(nn.Module):
 class PointNetReg(nn.Module):
     def __init__(self):
         super(PointNetReg, self).__init__()
-        self.feat = PointNetEncoder(global_feat=True)
+        self.feat = PointNetEncoder(global_feat=True, feature_transform=True)
         self.conv1 = torch.nn.Conv1d(1024, 512, 1)
         self.conv2 = torch.nn.Conv1d(512, 256, 1)
         self.conv3 = torch.nn.Conv1d(256, 128, 1)
@@ -148,7 +148,7 @@ class PointNetReg(nn.Module):
         # print(x.size())
         batchsize = x.size()[0]
         n_pts = x.size()[2]
-        x, trans = self.feat(x)
+        x, trans, _ = self.feat(x)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
@@ -171,7 +171,7 @@ class PointNetCls(nn.Module):
     def forward(self, x):
         batchsize = x.size()[0]
         n_pts = x.size()[2]
-        x, trans = self.feat(x)
+        x, trans, _ = self.feat(x)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
