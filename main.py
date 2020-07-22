@@ -19,7 +19,7 @@ import torch.utils.data
 from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
-from pointnet_full import PointNetCls, PointNetReg
+from pointnet_full import PointNetCls, PointNetReg, feature_transform_reguliarzer
 
 
 seed = 1234
