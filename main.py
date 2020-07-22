@@ -19,7 +19,7 @@ import torch.utils.data
 from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
-from pointnet import PointNetCls, PointNetReg
+from pointnet_full import PointNetCls, PointNetReg
 
 
 seed = 1234
@@ -132,6 +132,7 @@ def main(args):
     min_vali_loss = 99999
     model = None
     atom_cnt = 2
+    # multi thread
     train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
     vali_lst, vali_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
     test_lst, test_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
