@@ -90,6 +90,7 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=5):
         atoms = Atoms()
         # atoms.append(Atom('Au', (0.5, 0.5, 0.5)))
         atoms.append(Atom('Au', (0, 0, 0)))
+        atom_coords.append([0, 0, 0])
         for _ in range(atom_count-1):
             x = random.random() * side_len
             y = random.random() * side_len
