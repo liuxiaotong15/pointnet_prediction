@@ -155,17 +155,18 @@ def main(args):
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001) # Defined optimizer
     for epoch in range(1000):
         # Forward pass
-        y_pred = model(x_data)
+        y_pred, trans_feat = model(x_data)
         # print(y_pred.shape)
     
         # Compute loss
-        loss = criterion(y_pred, y_data)
+        loss = criterion(y_pred, y_data) + 0.001 * feature_transform_reguliarzer(trans_feat) 
         
         # Forward pass vali
-        y_pred_vali = model(x_data_vali)
+        y_pred_vali, trans_feat = model(x_data_vali)
     
         # Compute loss vali
-        loss_vali = criterion(y_pred_vali, y_data_vali)
+        loss_vali = criterion(y_pred_vali, y_data_vali) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+
         print(epoch, loss.item(), loss_vali.item())
 
         if loss_vali.item() < min_vali_loss:
@@ -184,7 +185,7 @@ def main(args):
     # load model
     model.load_state_dict(torch.load('best_vali.pth'))
     # inference on test dataset
-    y_pred_test = model(x_data_test)
+    y_pred_test, _ = model(x_data_test)
     
     if args.task == 'cls':
         success = 0
