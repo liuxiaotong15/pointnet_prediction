@@ -65,7 +65,7 @@ atom_cnt_dict = {}
 def parse_args():
     '''PARAMETERS'''
     parser = argparse.ArgumentParser('PointNet')
-    parser.add_argument('--batch_size', type=int, default=32, help='batch size in training')
+    parser.add_argument('--batch_size', type=int, default=64, help='batch size in training')
     parser.add_argument('--task', type=str, default='reg', help='specify task (\'reg\' or \'cls\')')
     # parser.add_argument('--normal', action='store_true', default=True, help='Whether to use normal information [default: False]')
     return parser.parse_args()
@@ -142,7 +142,7 @@ def main(args):
     model = None
     atom_cnt = 32
     # multi thread
-    train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
+    train_lst, train_tgt = gen_potential_data(args=args, data_count=10000, atom_count=atom_cnt)
     vali_lst, vali_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
     test_lst, test_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
     
@@ -165,11 +165,11 @@ def main(args):
     for epoch in range(1000):
         for i in range(0, len(train_lst), args.batch_size):
             # Forward pass
-            y_pred, trans_feat = model(x_data[i:i+batch_size])
+            y_pred, trans_feat = model(x_data[i:i+args.batch_size])
             # print(y_pred.shape)
         
             # Compute loss
-            loss = criterion(y_pred, y_data[i:i+batch_size]) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+            loss = criterion(torch.squeeze(y_pred), y_data[i:i+args.batch_size]) + 0.001 * feature_transform_reguliarzer(trans_feat) 
  
             # Zero gradients
             optimizer.zero_grad()
@@ -183,7 +183,7 @@ def main(args):
             y_pred_vali, trans_feat = model(x_data_vali)
     
             # Compute loss vali
-            loss_vali = criterion(y_pred_vali, y_data_vali) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+            loss_vali = criterion(torch.squeeze(y_pred_vali), y_data_vali) + 0.001 * feature_transform_reguliarzer(trans_feat) 
 
             print(epoch, loss.item(), loss_vali.item())
 
