@@ -159,33 +159,35 @@ def main(args):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001) # Defined optimizer
     for epoch in range(1000):
-        # Forward pass
-        y_pred, trans_feat = model(x_data)
-        # print(y_pred.shape)
-    
-        # Compute loss
-        loss = criterion(y_pred, y_data) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+        for i in range(0, len(train_lst), args.batch_size):
+            # Forward pass
+            y_pred, trans_feat = model(x_data[i:i+batch_size])
+            # print(y_pred.shape)
         
-        # Forward pass vali
-        y_pred_vali, trans_feat = model(x_data_vali)
+            # Compute loss
+            loss = criterion(y_pred, y_data[i:i+batch_size]) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+ 
+            # Zero gradients
+            optimizer.zero_grad()
+            # perform backward pass
+            loss.backward()
+            # update weights
+            optimizer.step()
+           
+        with torch.no_grad():
+            # Forward pass vali
+            y_pred_vali, trans_feat = model(x_data_vali)
     
-        # Compute loss vali
-        loss_vali = criterion(y_pred_vali, y_data_vali) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+            # Compute loss vali
+            loss_vali = criterion(y_pred_vali, y_data_vali) + 0.001 * feature_transform_reguliarzer(trans_feat) 
 
-        print(epoch, loss.item(), loss_vali.item())
+            print(epoch, loss.item(), loss_vali.item())
 
-        if loss_vali.item() < min_vali_loss:
-            min_vali_loss = loss_vali.item()
-            # save model
-            print('model saved...')
-            torch.save(model.state_dict(), 'best_vali.pth')
-
-        # Zero gradients
-        optimizer.zero_grad()
-        # perform backward pass
-        loss.backward()
-        # update weights
-        optimizer.step()
+            if loss_vali.item() < min_vali_loss:
+                min_vali_loss = loss_vali.item()
+                # save model
+                print('model saved...')
+                torch.save(model.state_dict(), 'best_vali.pth')
 
     # load model
     model.load_state_dict(torch.load('best_vali.pth'))
