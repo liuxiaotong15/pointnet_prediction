@@ -164,13 +164,13 @@ def main(args):
         # print(y_pred.shape)
     
         # Compute loss
-        loss = criterion(y_pred, y_data) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+        loss = criterion(torch.squeeze(y_pred), y_data) + 0.001 * feature_transform_reguliarzer(trans_feat) 
         
         # Forward pass vali
         y_pred_vali, trans_feat = model(x_data_vali)
     
         # Compute loss vali
-        loss_vali = criterion(y_pred_vali, y_data_vali) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+        loss_vali = criterion(torch.squeeze(y_pred_vali), y_data_vali) + 0.001 * feature_transform_reguliarzer(trans_feat) 
 
         print(epoch, loss.item(), loss_vali.item())
 
