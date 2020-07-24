@@ -20,11 +20,11 @@ import torch.utils.data
 from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
-from pointnet_full import PointNetCls, PointNetReg, feature_transform_reguliarzer
+# from pointnet_full import PointNetCls, PointNetReg, feature_transform_reguliarzer
 
 
 # pointnet++ cost so much memory...
-# from pointnet_pp import PointNetCls, PointNetReg
+from pointnet_pp import PointNetCls, PointNetReg
 
 
 seed = 1234
@@ -85,7 +85,7 @@ def get_data_pp(idx, type):
     prop = prop.reshape(shape)
     return prop
 
-def gen_potential_data(args, data_count=100, atom_count=2, side_len=10):
+def gen_potential_data(args, data_count=100, atom_count=2, side_len=20, interval=10):
     input_lst = []
     tgt_lst = []
     postv = data_count/2
@@ -112,7 +112,7 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=10):
             engy = traj[i].get_potential_energy()
 
             if args.task == 'reg':
-                if engy < -0.01 and i%20==0:
+                if engy < -0.01 and i%interval==0:
                     input_lst.append(atom_coords)
                     tgt_lst.append(min(engy, 0))
             elif args.task == 'cls':
@@ -140,7 +140,7 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=10):
 def main(args):
     min_vali_loss = 99999
     model = None
-    atom_cnt = 32
+    atom_cnt = 128
     # multi thread
     train_lst, train_tgt = gen_potential_data(args=args, data_count=10000, atom_count=atom_cnt)
     vali_lst, vali_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
@@ -169,7 +169,7 @@ def main(args):
             # print(y_pred.shape)
         
             # Compute loss
-            loss = criterion(torch.squeeze(y_pred), y_data[i:i+args.batch_size]) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+            loss = criterion(torch.squeeze(y_pred), y_data[i:i+args.batch_size]) # + 0.001 * feature_transform_reguliarzer(trans_feat) 
  
             # Zero gradients
             optimizer.zero_grad()
@@ -183,7 +183,7 @@ def main(args):
             y_pred_vali, trans_feat = model(x_data_vali)
     
             # Compute loss vali
-            loss_vali = criterion(torch.squeeze(y_pred_vali), y_data_vali) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+            loss_vali = criterion(torch.squeeze(y_pred_vali), y_data_vali) # + 0.001 * feature_transform_reguliarzer(trans_feat) 
 
             print(epoch, loss.item(), loss_vali.item())
 
