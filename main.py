@@ -19,7 +19,8 @@ import torch.utils.data
 from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
-from pointnet_full import PointNetCls, PointNetReg, feature_transform_reguliarzer
+# from pointnet_full import PointNetCls, PointNetReg, feature_transform_reguliarzer
+from pointnet_pp import PointNetCls, PointNetReg
 
 
 seed = 1234
@@ -80,7 +81,7 @@ def get_data_pp(idx, type):
     prop = prop.reshape(shape)
     return prop
 
-def gen_potential_data(args, data_count=100, atom_count=2, side_len=5):
+def gen_potential_data(args, data_count=100, atom_count=2, side_len=10):
     input_lst = []
     tgt_lst = []
     postv = data_count/2
@@ -132,7 +133,7 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=5):
 def main(args):
     min_vali_loss = 99999
     model = None
-    atom_cnt = 2
+    atom_cnt = 32
     # multi thread
     train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
     vali_lst, vali_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
@@ -160,13 +161,13 @@ def main(args):
         # print(y_pred.shape)
     
         # Compute loss
-        loss = criterion(y_pred, y_data) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+        loss = criterion(y_pred, y_data) # + 0.001 * feature_transform_reguliarzer(trans_feat) 
         
         # Forward pass vali
         y_pred_vali, trans_feat = model(x_data_vali)
     
         # Compute loss vali
-        loss_vali = criterion(y_pred_vali, y_data_vali) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+        loss_vali = criterion(y_pred_vali, y_data_vali) # + 0.001 * feature_transform_reguliarzer(trans_feat) 
 
         print(epoch, loss.item(), loss_vali.item())
 
