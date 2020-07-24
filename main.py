@@ -6,11 +6,12 @@ from ase.visualize import view
 from ase import Atoms, Atom
 from ase.db import connect
 from ase.calculators.morse import MorsePotential
-
+from ase.optimize import QuasiNewton, BFGS
 import random
 from ase.build import sort
 from ase import Atom
 from ase.io import read, write
+from ase.io.trajectory import Trajectory
 from base64 import b64encode, b64decode
 import itertools
 import torch.nn as nn
@@ -94,36 +95,39 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=10):
         atoms = Atoms()
         # atoms.append(Atom('Au', (0.5, 0.5, 0.5)))
         atoms.append(Atom('Au', (0, 0, 0)))
-        atom_coords.append([0, 0, 0])
         for _ in range(atom_count-1):
             x = random.random() * side_len
             y = random.random() * side_len
             z = random.random() * side_len
             atoms.append(Atom('Au', (x, y, z)))
-            atom_coords.append([x, y, z])
         
         morse_calc = MorsePotential()
         
         atoms.set_calculator(morse_calc)
-        engy = atoms.get_potential_energy()
+        dyn = BFGS(atoms, trajectory='latest_relax.traj')
+        dyn.run(fmax=0.05, steps=1000)
+        traj = Trajectory('latest_relax.traj')
+        for i in range(len(traj)):
+            atom_coords = list(traj[i].positions)
+            engy = traj[i].get_potential_energy()
 
-        if args.task == 'reg':
-            if engy < -0.01:
-                input_lst.append(atom_coords)
-                tgt_lst.append(min(engy, 0))
-        elif args.task == 'cls':
-            if engy < 0 and negtv > 0:
-                negtv-=1
-                input_lst.append(atom_coords)
-                tgt_lst.append(0)
-            elif engy > 0 and postv > 0:
-                postv -= 1
-                input_lst.append(atom_coords)
-                tgt_lst.append(1)
+            if args.task == 'reg':
+                if engy < -0.01 and i%20==0:
+                    input_lst.append(atom_coords)
+                    tgt_lst.append(min(engy, 0))
+            elif args.task == 'cls':
+                if engy < 0 and negtv > 0:
+                    negtv-=1
+                    input_lst.append(atom_coords)
+                    tgt_lst.append(0)
+                elif engy > 0 and postv > 0:
+                    postv -= 1
+                    input_lst.append(atom_coords)
+                    tgt_lst.append(1)
+                else:
+                    pass
             else:
                 pass
-        else:
-            pass
 
     if args.task == 'reg':
         # normalize
