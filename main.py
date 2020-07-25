@@ -65,7 +65,7 @@ atom_cnt_dict = {}
 def parse_args():
     '''PARAMETERS'''
     parser = argparse.ArgumentParser('PointNet')
-    parser.add_argument('--batch_size', type=int, default=64, help='batch size in training')
+    parser.add_argument('--batch_size', type=int, default=16, help='batch size in training')
     parser.add_argument('--task', type=str, default='reg', help='specify task (\'reg\' or \'cls\')')
     # parser.add_argument('--normal', action='store_true', default=True, help='Whether to use normal information [default: False]')
     return parser.parse_args()
@@ -142,9 +142,13 @@ def main(args):
     model = None
     atom_cnt = 128
     # multi thread
-    train_lst, train_tgt = gen_potential_data(args=args, data_count=10000, atom_count=atom_cnt)
+    train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
+    print('training data generate finished')
     vali_lst, vali_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
+    print('vali data generate finished')
     test_lst, test_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
+    print('test data generate finished')
+
     
     if args.task == 'reg':
         model = PointNetReg()
@@ -179,16 +183,19 @@ def main(args):
             optimizer.step()
            
         with torch.no_grad():
-            # Forward pass vali
-            y_pred_vali, trans_feat = model(x_data_vali)
+            loss_vali_val = 0
+            for i in range(0, len(vali_lst), args.batch_size):
+                # Forward pass vali
+                y_pred_vali, trans_feat = model(x_data_vali[i:i+args.batch_size])
     
-            # Compute loss vali
-            loss_vali = criterion(torch.squeeze(y_pred_vali), y_data_vali) # + 0.001 * feature_transform_reguliarzer(trans_feat) 
+                # Compute loss vali
+                loss_vali = criterion(torch.squeeze(y_pred_vali), y_data_vali[i:i+args.batch_size]) # + 0.001 * feature_transform_reguliarzer(trans_feat) 
+                loss_vali_val += loss_vali.item()
+            loss_vali_val /= (len(vali_lst)/args.batch_size)
+            print(epoch, loss.item(), loss_vali_val)
 
-            print(epoch, loss.item(), loss_vali.item())
-
-            if loss_vali.item() < min_vali_loss:
-                min_vali_loss = loss_vali.item()
+            if loss_vali_val < min_vali_loss:
+                min_vali_loss = loss_vali_val
                 # save model
                 print('model saved...')
                 torch.save(model.state_dict(), 'best_vali.pth')
@@ -196,30 +203,31 @@ def main(args):
     # load model
     model.load_state_dict(torch.load('best_vali.pth'))
 
-
     with torch.no_grad():
-        # inference on test dataset
-        y_pred_test, _ = model(x_data_test)
+        success = 0
+        err = 0
+        for i in range(0, len(test_lst), args.batch_size):
+            # inference on test dataset
+            y_pred_test, _ = model(x_data_test[i:i+args.batch_size])
+            if args.task == 'cls':
+                for j in range(args.batch_size):
+                    if y_pred_test[j][0] > y_pred_test[j][1] and 0 == test_tgt[i+j]:
+                        success += 1
+                    elif y_pred_test[j][0] < y_pred_test[j][1] and 1 == test_tgt[i+j]:
+                        success += 1
+                    else:
+                        pass
+            elif args.task == 'reg':
+                test_pred = y_pred_test.detach().numpy()
+                for j in range(args.batch_size):
+                    err += abs((test_pred[j] - test_tgt[i+j])/test_tgt[i+j])
+            else:
+                pass
         
         if args.task == 'cls':
-            success = 0
-            for i in range(len(test_tgt)):
-                if y_pred_test[i][0] > y_pred_test[i][1] and 0 == test_tgt[i]:
-                    success += 1
-                elif y_pred_test[i][0] < y_pred_test[i][1] and 1 == test_tgt[i]:
-                    success += 1
-                else:
-                    pass
             print('classify success: ', success, 'of', len(test_tgt))
         elif args.task == 'reg':
-            err = 0
-            test_pred = y_pred_test.detach().numpy()
-            for i in range(len(test_tgt)):
-                print(test_pred[i], test_tgt[i])
-                err += abs((test_pred[i] - test_tgt[i])/test_tgt[i])
             print('percentage of regression error: ', err/len(test_tgt)*100, '%')
-        else:
-            pass
 
 if __name__ == '__main__':
     args = parse_args()
