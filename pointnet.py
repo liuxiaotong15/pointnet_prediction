@@ -109,7 +109,7 @@ class PointNetReg(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
-        x = self.conv4(x)
+        x = torch.sigmoid(self.conv4(x))
         return x
 
 class PointNetCls(nn.Module):
