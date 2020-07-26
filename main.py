@@ -1,6 +1,7 @@
 
 import torch
 
+import h5py
 import argparse
 from ase.visualize import view
 from ase import Atoms, Atom
@@ -52,10 +53,10 @@ H = "enthalpy_H"
 G = "free_energy"
 Cv = "heat_capacity"
 
-db = connect('./qm9.db')
+# db = connect('./qm9.db')
 # 16.1% memory usage of a 128G machine
 # rows = list(db.select(sort='id'))
-rows = list(db.select('id<200'))
+# rows = list(db.select('id<200'))
 
 atom_names = ['H', 'C', 'O', 'F', 'N']
 atom_dict = {'H': 0, 'C':1, 'O':2, 'F':3, 'N':4}
@@ -67,7 +68,7 @@ def parse_args():
     parser = argparse.ArgumentParser('PointNet')
     parser.add_argument('--batch_size', type=int, default=16, help='batch size in training')
     parser.add_argument('--task', type=str, default='reg', help='specify task (\'reg\' or \'cls\')')
-    # parser.add_argument('--normal', action='store_true', default=True, help='Whether to use normal information [default: False]')
+    parser.add_argument('--load_data', action='store_true', default=False, help='load data from dataset_morse.hdf5')
     return parser.parse_args()
 
 
@@ -106,7 +107,7 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=20, interval
         
         atoms.set_calculator(morse_calc)
         dyn = BFGS(atoms, trajectory='latest_relax.traj')
-        dyn.run(fmax=0.05, steps=1000)
+        dyn.run(fmax=0.1, steps=100)
         traj = Trajectory('latest_relax.traj')
         atoms_lst += traj
 
@@ -146,8 +147,20 @@ def main(args):
     min_vali_loss = 99999
     model = None
     atom_cnt = 128
-    
-    data_lst, data_tgt = gen_potential_data(args=args, data_count=10000, atom_count=atom_cnt)
+    if args.load_data:
+        f = h5py.File('dataset_morse.hdf5', 'r')
+        data_lst = f['dset1'][:]
+        data_tgt = f['dset2'][:]
+        f.close()
+    else:
+        data_lst, data_tgt = gen_potential_data(args=args, data_count=10000, atom_count=atom_cnt)
+
+        f = h5py.File('dataset_morse.hdf5', 'w')
+        f.create_group('/grp1') # or f.create_group('grp1')
+        f.create_dataset('dset1', compression='gzip', data=np.array(data_lst))
+        f.create_dataset('dset2', compression='gzip', data=np.array(data_tgt))
+        f.close()
+
     train_lst, train_tgt = data_lst[0:len(data_lst)*0.8], data_tgt[0:len(data_lst)*0.8]
     vali_lst, vali_tgt = data_lst[len(data_lst)*0.8:len(data_lst)*0.9], data_tgt[len(data_lst)*0.8:len(data_lst)*0.9]
     test_lst, test_tgt = data_lst[len(data_lst)*0.9:len(data_lst)*1.0], data_tgt[len(data_lst)*0.9:len(data_lst)*1.0]
