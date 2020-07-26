@@ -88,6 +88,7 @@ def get_data_pp(idx, type):
 def gen_potential_data(args, data_count=100, atom_count=2, side_len=20, interval=10):
     input_lst = []
     tgt_lst = []
+    atoms_lst = []
     postv = data_count/2
     negtv = data_count/2
     while(len(tgt_lst) < data_count):
@@ -107,27 +108,31 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=20, interval
         dyn = BFGS(atoms, trajectory='latest_relax.traj')
         dyn.run(fmax=0.05, steps=1000)
         traj = Trajectory('latest_relax.traj')
-        for i in range(len(traj)):
-            atom_coords = list(traj[i].positions)
-            engy = traj[i].get_potential_energy()
+        atoms_lst += traj
 
-            if args.task == 'reg':
-                if engy < -0.01 and i%interval==0:
-                    input_lst.append(atom_coords)
-                    tgt_lst.append(min(engy, 0))
-            elif args.task == 'cls':
-                if engy < 0 and negtv > 0:
-                    negtv-=1
-                    input_lst.append(atom_coords)
-                    tgt_lst.append(0)
-                elif engy > 0 and postv > 0:
-                    postv -= 1
-                    input_lst.append(atom_coords)
-                    tgt_lst.append(1)
-                else:
-                    pass
+    random.shuffle(atoms_lst)
+
+    for i in range(len(atoms_lst)):
+        atom_coords = list(atoms_lst[i].positions)
+        engy = atoms_lst[i].get_potential_energy()
+
+        if args.task == 'reg':
+            if engy < -0.01 and i%interval==0:
+                input_lst.append(atom_coords)
+                tgt_lst.append(min(engy, 0))
+        elif args.task == 'cls':
+            if engy < 0 and negtv > 0:
+                negtv-=1
+                input_lst.append(atom_coords)
+                tgt_lst.append(0)
+            elif engy > 0 and postv > 0:
+                postv -= 1
+                input_lst.append(atom_coords)
+                tgt_lst.append(1)
             else:
                 pass
+        else:
+            pass
 
     if args.task == 'reg':
         # normalize
@@ -141,13 +146,11 @@ def main(args):
     min_vali_loss = 99999
     model = None
     atom_cnt = 128
-    # multi thread
-    train_lst, train_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
-    print('training data generate finished')
-    vali_lst, vali_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
-    print('vali data generate finished')
-    test_lst, test_tgt = gen_potential_data(args=args, data_count=1000, atom_count=atom_cnt)
-    print('test data generate finished')
+    
+    data_lst, data_tgt = gen_potential_data(args=args, data_count=10000, atom_count=atom_cnt)
+    train_lst, train_tgt = data_lst[0:len(data_lst)*0.8], data_tgt[0:len(data_lst)*0.8]
+    vali_lst, vali_tgt = data_lst[len(data_lst)*0.8:len(data_lst)*0.9], data_tgt[len(data_lst)*0.8:len(data_lst)*0.9]
+    test_lst, test_tgt = data_lst[len(data_lst)*0.9:len(data_lst)*1.0], data_tgt[len(data_lst)*0.9:len(data_lst)*1.0]
 
     
     if args.task == 'reg':
