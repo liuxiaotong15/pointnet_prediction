@@ -3,6 +3,7 @@ import torch
 
 import h5py
 import argparse
+import time
 from ase.visualize import view
 from ase import Atoms, Atom
 from ase.db import connect
@@ -221,7 +222,7 @@ def main(args):
                 loss_vali = criterion(torch.squeeze(y_pred_vali), y_data_vali[i:i+args.batch_size]) + 0.001 * feature_transform_reguliarzer(trans_feat) 
                 loss_vali_val += loss_vali.item()
             loss_vali_val /= (len(vali_lst)/args.batch_size)
-            print(epoch, loss.item(), loss_vali_val)
+            print(epoch, loss.item(), loss_vali_val, time.asctime(time.localtime(time.time())))
 
             if loss_vali_val < min_vali_loss:
                 min_vali_loss = loss_vali_val
