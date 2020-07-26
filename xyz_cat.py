@@ -106,12 +106,12 @@ class PointNetReg(nn.Module):
         batchsize = x.size()[0]
         n_pts = x.size()[2] # 128*3
         # x, trans = self.feat(x)
-        x = x.view(-1, 128*3, 1)
+        x = x.reshape(-1, 128*3, 1)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
         x = torch.sigmoid(self.conv4(x))
-        return x
+        return x, None
 
 class PointNetCls(nn.Module):
     def __init__(self, k = 2):

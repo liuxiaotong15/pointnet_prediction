@@ -27,6 +27,7 @@ from pointnet_full import PointNetCls, PointNetReg, feature_transform_reguliarze
 
 # pointnet++ cost so much memory...
 # from pointnet_pp import PointNetCls, PointNetReg
+# from xyz_cat import PointNetCls, PointNetReg
 
 
 seed = 1234
@@ -195,7 +196,7 @@ def main(args):
     x_data_test = torch.from_numpy(np.array(test_lst).transpose(0, 2, 1)).to('cpu')
     y_data_test = torch.from_numpy(np.array(test_tgt)).to('cpu')
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001) # Defined optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.00001) # Defined optimizer
     for epoch in range(1000):
         for i in range(0, len(train_lst), args.batch_size):
             # Forward pass
