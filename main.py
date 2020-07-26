@@ -92,7 +92,9 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=20, interval
     atoms_lst = []
     postv = data_count/2
     negtv = data_count/2
-    while(len(tgt_lst) < data_count):
+    while(len(atoms_lst) < data_count):
+        print('current data size is: ', len(atoms_lst))
+        last_engy = 0
         atom_coords = []
         atoms = Atoms()
         # atoms.append(Atom('Au', (0.5, 0.5, 0.5)))
@@ -109,32 +111,41 @@ def gen_potential_data(args, data_count=100, atom_count=2, side_len=20, interval
         dyn = BFGS(atoms, trajectory='latest_relax.traj')
         dyn.run(fmax=0.1, steps=100)
         traj = Trajectory('latest_relax.traj')
-        atoms_lst += traj
+        for atoms in traj:
+            cur_engy = atoms.get_potential_energy()
+            if args.task == 'reg':
+                if cur_engy < -0.01 and abs(last_engy-cur_engy) > 1:
+                    atoms_lst.append(atoms)
+                    last_engy = cur_engy
+            elif args.task == 'cls':
+                if cur_engy < 0 and negtv > 0:
+                    negtv -= 1
+                    atoms_lst.append(atoms)
+                elif cur_engy > 0 and postv > 0:
+                    postv -= 1
+                    atoms_lst.append(atoms)
+                else:
+                    pass
+            else:
+                pass
 
     random.shuffle(atoms_lst)
 
     for i in range(len(atoms_lst)):
         atom_coords = list(atoms_lst[i].positions)
         engy = atoms_lst[i].get_potential_energy()
-
+        input_lst.append(atom_coords)
         if args.task == 'reg':
-            if engy < -0.01 and i%interval==0:
-                input_lst.append(atom_coords)
-                tgt_lst.append(min(engy, 0))
+            tgt_lst.append(engy)
         elif args.task == 'cls':
-            if engy < 0 and negtv > 0:
-                negtv-=1
-                input_lst.append(atom_coords)
+            if engy < 0:
                 tgt_lst.append(0)
-            elif engy > 0 and postv > 0:
-                postv -= 1
-                input_lst.append(atom_coords)
-                tgt_lst.append(1)
             else:
-                pass
+                tgt_lst.append(1)
         else:
             pass
 
+        
     if args.task == 'reg':
         # normalize
         tgt_lst = np.array(tgt_lst)
@@ -152,6 +163,7 @@ def main(args):
         data_lst = f['dset1'][:]
         data_tgt = f['dset2'][:]
         f.close()
+        print('load data finished.')
     else:
         data_lst, data_tgt = gen_potential_data(args=args, data_count=10000, atom_count=atom_cnt)
 
@@ -160,10 +172,11 @@ def main(args):
         f.create_dataset('dset1', compression='gzip', data=np.array(data_lst))
         f.create_dataset('dset2', compression='gzip', data=np.array(data_tgt))
         f.close()
+        print('save data finished.')
 
-    train_lst, train_tgt = data_lst[0:len(data_lst)*0.8], data_tgt[0:len(data_lst)*0.8]
-    vali_lst, vali_tgt = data_lst[len(data_lst)*0.8:len(data_lst)*0.9], data_tgt[len(data_lst)*0.8:len(data_lst)*0.9]
-    test_lst, test_tgt = data_lst[len(data_lst)*0.9:len(data_lst)*1.0], data_tgt[len(data_lst)*0.9:len(data_lst)*1.0]
+    train_lst, train_tgt = data_lst[0:int(len(data_lst)*0.8)], data_tgt[0:int(len(data_lst)*0.8)]
+    vali_lst, vali_tgt = data_lst[int(len(data_lst)*0.8):int(len(data_lst)*0.9)], data_tgt[int(len(data_lst)*0.8):int(len(data_lst)*0.9)]
+    test_lst, test_tgt = data_lst[int(len(data_lst)*0.9):len(data_lst)], data_tgt[int(len(data_lst)*0.9):len(data_lst)]
 
     
     if args.task == 'reg':
