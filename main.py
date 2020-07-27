@@ -196,8 +196,10 @@ def main(args):
     x_data_test = torch.from_numpy(np.array(test_lst).transpose(0, 2, 1)).to('cpu')
     y_data_test = torch.from_numpy(np.array(test_tgt)).to('cpu')
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.00001) # Defined optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001) # Defined optimizer
     for epoch in range(1000):
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = 1e-4 * (0.5 ** (epoch//100))
         for i in range(0, len(train_lst), args.batch_size):
             # Forward pass
             y_pred, trans_feat = model(x_data[i:i+args.batch_size])
