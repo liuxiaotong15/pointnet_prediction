@@ -167,7 +167,7 @@ def main(args):
         f.close()
         print('load data finished.')
     else:
-        data_lst, data_tgt = gen_potential_data(args=args, data_count=10000, atom_count=atom_cnt)
+        data_lst, data_tgt = gen_potential_data(args=args, data_count=50000, atom_count=atom_cnt)
 
         f = h5py.File('dataset_morse.hdf5', 'w')
         f.create_group('/grp1') # or f.create_group('grp1')
@@ -202,11 +202,10 @@ def main(args):
             param_group['lr'] = 1e-4 * (0.5 ** (epoch//100))
         for i in range(0, len(train_lst), args.batch_size):
             # Forward pass
-            y_pred, trans_feat = model(x_data[i:i+args.batch_size])
+            y_pred, trans, trans_feat = model(x_data[i:i+args.batch_size])
             # print(y_pred.shape)
-        
             # Compute loss
-            loss = criterion(torch.squeeze(y_pred), y_data[i:i+args.batch_size]) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+            loss = criterion(torch.squeeze(y_pred), y_data[i:i+args.batch_size]) + 0.001 * feature_transform_reguliarzer(trans) 
  
             # Zero gradients
             optimizer.zero_grad()
@@ -219,10 +218,10 @@ def main(args):
             loss_vali_val = 0
             for i in range(0, len(vali_lst), args.batch_size):
                 # Forward pass vali
-                y_pred_vali, trans_feat = model(x_data_vali[i:i+args.batch_size])
+                y_pred_vali, trans, trans_feat = model(x_data_vali[i:i+args.batch_size])
     
                 # Compute loss vali
-                loss_vali = criterion(torch.squeeze(y_pred_vali), y_data_vali[i:i+args.batch_size]) + 0.001 * feature_transform_reguliarzer(trans_feat) 
+                loss_vali = criterion(torch.squeeze(y_pred_vali), y_data_vali[i:i+args.batch_size]) + 0.001 * feature_transform_reguliarzer(trans) 
                 loss_vali_val += loss_vali.item()
             loss_vali_val /= (len(vali_lst)/args.batch_size)
             print(epoch, loss.item(), loss_vali_val, time.asctime(time.localtime(time.time())))

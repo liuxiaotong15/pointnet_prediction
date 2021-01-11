@@ -153,7 +153,7 @@ class PointNetReg(nn.Module):
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
         x = self.conv4(x)
-        return x, trans_feat
+        return x, trans, trans_feat
 
 class PointNetCls(nn.Module):
     def __init__(self, k = 2):
@@ -180,7 +180,7 @@ class PointNetCls(nn.Module):
         x = F.log_softmax(x.view(-1,self.k), dim=-1)
         # x = x.view(batchsize, n_pts, self.k)
         x = x.view(batchsize, self.k)
-        return x, trans_feat
+        return x, trans, trans_feat
 
 
 
