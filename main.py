@@ -197,6 +197,7 @@ def main(args):
     y_data_test = torch.from_numpy(np.array(test_tgt)).to('cpu')
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001) # Defined optimizer
+    
     for epoch in range(1000):
         for param_group in optimizer.param_groups:
             param_group['lr'] = 1e-4 * (0.5 ** (epoch//100))
@@ -231,7 +232,6 @@ def main(args):
                 # save model
                 print('model saved...')
                 torch.save(model.state_dict(), 'best_vali.pth')
-
     # load model
     model.load_state_dict(torch.load('best_vali.pth'))
 
@@ -240,9 +240,9 @@ def main(args):
         err = 0
         for i in range(0, len(test_lst), args.batch_size):
             # inference on test dataset
-            y_pred_test, _ = model(x_data_test[i:i+args.batch_size])
+            y_pred_test, _, __ = model(x_data_test[i:i+args.batch_size])
             if args.task == 'cls':
-                for j in range(args.batch_size):
+                for j in range(min(args.batch_size, y_pred_test.shape[0])):
                     if y_pred_test[j][0] > y_pred_test[j][1] and 0 == test_tgt[i+j]:
                         success += 1
                     elif y_pred_test[j][0] < y_pred_test[j][1] and 1 == test_tgt[i+j]:
