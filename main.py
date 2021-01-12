@@ -251,7 +251,7 @@ def main(args):
                         pass
             elif args.task == 'reg':
                 test_pred = y_pred_test.detach().numpy()
-                for j in range(args.batch_size):
+                for j in range(min(args.batch_size, y_pred_test.shape[0])):
                     err += abs((test_pred[j] - test_tgt[i+j])/test_tgt[i+j])
             else:
                 pass
