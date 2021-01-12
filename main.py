@@ -206,7 +206,9 @@ def main(args):
             y_pred, trans, trans_feat = model(x_data[i:i+args.batch_size])
             # print(y_pred.shape)
             # Compute loss
-            loss = criterion(torch.squeeze(y_pred), y_data[i:i+args.batch_size]) + 0.001 * feature_transform_reguliarzer(trans) 
+            loss = criterion(torch.squeeze(y_pred), y_data[i:i+args.batch_size]) + 0.001 * feature_transform_reguliarzer(trans)
+            if args.task == 'reg':
+                loss += 0.001 * feature_transform_reguliarzer(trans_feat)
  
             # Zero gradients
             optimizer.zero_grad()
